@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Supervisor Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="navbar">
+        <h1>🧠 AI Supervisor Dashboard</h1>
+    </div>
+
+    <div class="container">
+        <!-- Ask AI Section -->
+        <div class="ask-section glass-card">
+            <h2>Ask the AI Assistant</h2>
+            <div class="input-group">
+                <input type="text" id="question" placeholder="Type your question here..." />
+                <button onclick="askAI()">Ask</button>
+            </div>
+            <div id="response-box">💬 The AI’s response will appear here...</div>
+        </div>
+
+        <!-- Supervisor Requests -->
+        <div class="requests-section glass-card">
+            <h2>Supervisor Help Requests</h2>
+            <table id="requests-table">
+                <thead>
+                    <tr>
+                        <th>Question</th>
+                        <th>Status</th>
+                        <th>Answer</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 AI Supervisor System | Designed and Developed By Aamir khan</p>
+    </footer>
+
+    <script>
+        const backendURL = "http://127.0.0.1:8000";
+
+        async function askAI() {
+            const question = document.getElementById("question").value;
+            const resBox = document.getElementById("response-box");
+
+            if (!question.trim()) {
+                resBox.innerText = "⚠️ Please type a question first.";
+                return;
+            }
+
+            resBox.innerHTML = `<div class="thinking">🤔 Thinking...</div>`;
+            const res = await fetch(`${backendURL}/ask-ai/?question=${encodeURIComponent(question)}`, {
+                method: "POST"
+            });
+            const data = await res.json();
+
+            resBox.classList.add("visible");
+            if (data.answer) {
+                resBox.innerHTML = `<div class="ai-reply">🧠 <b>AI:</b> ${data.answer}</div>`;
+            } else {
+                resBox.innerHTML = `<div class="ai-reply">💬 ${data.message}</div>`;
+            }
+
+            loadRequests();
+        }
+
+        async function loadRequests() {
+            const res = await fetch(`${backendURL}/requests/`);
+            const data = await res.json();
+
+            const tbody = document.querySelector("#requests-table tbody");
+            tbody.innerHTML = "";
+
+            data.forEach(req => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+          <td>${req.question}</td>
+          <td><span class="status ${req.status}">${req.status}</span></td>
+          <td>${req.answer || "-"}</td>
+          <td>
+            ${req.status === "pending"
+              ? `<button class="answer-btn" onclick="answerRequest('${req._id}')">Answer</button>`
+              : ""}
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function answerRequest(id) {
+      const answer = prompt("Enter AI's answer for this question:");
+      if (!answer) return;
+
+      await fetch(`${backendURL}/requests/${id}/answer/?answer=${encodeURIComponent(answer)}`, {
+        method: "POST"
+      });
+      alert("✅ AI has learned the new answer!");
+      loadRequests();
+    }
+
+    loadRequests();
+    </script>
+</body>
+
+</html>
